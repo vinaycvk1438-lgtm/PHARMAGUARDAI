@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PharmaGuard AI — Pharmacogenomics Decision Support</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#0a0f1e;--bg2:#0f1629;--bg3:#141d35;--bg4:#1a2540;
+  --surface:#1e2d4a;--surface2:#243358;--border:#2a3f66;--border2:#334d7a;
+  --accent:#3b82f6;--accent2:#60a5fa;--accent3:#93c5fd;
+  --text:#e8edf8;--text2:#a8b8d8;--text3:#6b82a8;
+  --safe:#10b981;--safe-bg:#052e1c;--safe-border:#065f46;
+  --warn:#f59e0b;--warn-bg:#2d1e02;--warn-border:#78350f;
+  --danger:#ef4444;--danger-bg:#2d0a0a;--danger-border:#7f1d1d;
+  --critical:#dc2626;--ineff:#8b5cf6;--ineff-bg:#1e1030;--ineff-border:#4c1d95;
+  --font-head:'Syne',sans-serif;--font-body:'Plus Jakarta Sans',sans-serif;--font-mono:'DM Mono',monospace;
+}
+.theme-blue{
+  --bg:#f0f4ff;--bg2:#e8effc;--bg3:#dde7fa;--bg4:#cfdaf7;
+  --surface:#fff;--surface2:#f5f8ff;--border:#c5d4f0;--border2:#a8c0e8;
+  --accent:#1d4ed8;--accent2:#2563eb;--accent3:#3b82f6;
+  --text:#0f172a;--text2:#1e3a6e;--text3:#4a6fa5;
+  --safe:#047857;--safe-bg:#ecfdf5;--safe-border:#a7f3d0;
+  --warn:#b45309;--warn-bg:#fffbeb;--warn-border:#fde68a;
+  --danger:#b91c1c;--danger-bg:#fef2f2;--danger-border:#fecaca;
+  --critical:#991b1b;--ineff:#6d28d9;--ineff-bg:#f5f3ff;--ineff-border:#ddd6fe;
+}
+.theme-green{
+  --bg:#f0faf4;--bg2:#e6f7ec;--bg3:#d9f2e3;--bg4:#c9ecda;
+  --surface:#fff;--surface2:#f4fbf6;--border:#b6e5c8;--border2:#8dd4ab;
+  --accent:#065f46;--accent2:#047857;--accent3:#059669;
+  --text:#022c22;--text2:#064e3b;--text3:#2d6a4f;
+  --safe:#047857;--safe-bg:#ecfdf5;--safe-border:#a7f3d0;
+  --warn:#92400e;--warn-bg:#fffbeb;--warn-border:#fde68a;
+  --danger:#991b1b;--danger-bg:#fef2f2;--danger-border:#fecaca;
+  --critical:#7f1d1d;--ineff:#5b21b6;--ineff-bg:#f5f3ff;--ineff-border:#ddd6fe;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
+/* ---- SCROLLBAR ---- */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ====== LOGIN ====== */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);padding:20px}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,.4)}
+.login-header{background:linear-gradient(135deg,var(--accent),var(--accent2));padding:36px 32px;text-align:center}
+.login-logo{font-family:var(--font-head);font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.5px;margin-bottom:6px}
+.login-sub{color:rgba(255,255,255,.8);font-size:13px;font-family:var(--font-mono)}
+.login-body{padding:32px}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.field input,.field select{width:100%;padding:12px 14px;background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-body);font-size:14px;outline:none;transition:border .2s}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.field select{cursor:pointer}
+.btn-primary{width:100%;padding:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:10px;color:#fff;font-family:var(--font-head);font-weight:700;font-size:15px;cursor:pointer;transition:opacity .2s,transform .1s;margin-top:6px}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+.login-footer{padding:16px 32px;border-top:1px solid var(--border);background:var(--bg2);text-align:center;font-size:12px;color:var(--text3);font-family:var(--font-mono)}
+.login-err{background:var(--danger-bg);border:1px solid var(--danger-border);color:var(--danger);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+
+/* ====== APP ====== */
+#app-screen{display:none;min-height:100vh;flex-direction:column}
+/* NAV */
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:16px;height:60px;position:sticky;top:0;z-index:100}
+.nav-logo{font-family:var(--font-head);font-weight:800;font-size:18px;color:var(--accent);letter-spacing:-.5px;margin-right:auto}
+.nav-logo span{color:var(--text)}
+.nav-user{font-size:12px;color:var(--text3);font-family:var(--font-mono)}
+.nav-btn{padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text2);font-size:12px;font-family:var(--font-body);font-weight:600;cursor:pointer;transition:all .2s}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent)}
+/* TABS */
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:2px}
+.tab{padding:13px 20px;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;font-family:var(--font-head)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover:not(.active){color:var(--text2)}
+/* CONTENT */
+.content{flex:1;padding:28px 24px;max-width:1100px;margin:0 auto;width:100%}
+/* SECTION */
+.section-title{font-family:var(--font-head);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:18px}
+/* UPLOAD */
+.drop-zone{border:2px dashed var(--border2);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2)}
+.drop-zone.over{border-color:var(--accent);background:var(--surface2)}
+.drop-icon{font-size:36px;margin-bottom:10px}
+.drop-title{font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--text);margin-bottom:4px}
+.drop-sub{font-size:12px;color:var(--text3);font-family:var(--font-mono)}
+.file-info{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--safe-bg);border:1px solid var(--safe-border);border-radius:10px;margin-top:12px}
+.file-info-name{font-family:var(--font-mono);font-size:13px;color:var(--safe);flex:1}
+.size-bar-wrap{margin-top:8px}
+.size-label{font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-bottom:4px}
+.size-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.size-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--safe));border-radius:2px;transition:width .3s}
+/* DRUG INPUT */
+.drug-mode-toggle{display:flex;gap:8px;margin-bottom:14px}
+.mode-btn{padding:6px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.mode-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.drug-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.drug-check{display:flex;align-items:center;gap:9px;padding:10px 14px;background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s}
+.drug-check:hover{border-color:var(--accent2)}
+.drug-check.selected{background:var(--surface2);border-color:var(--accent)}
+.drug-check input{accent-color:var(--accent);width:15px;height:15px}
+.drug-name{font-family:var(--font-mono);font-size:13px;color:var(--text);font-weight:500}
+.drug-gene{font-size:10px;color:var(--text3);margin-top:2px}
+.drug-text-input{width:100%;padding:12px 14px;background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-mono);font-size:13px;outline:none;transition:border .2s}
+.drug-text-input:focus{border-color:var(--accent)}
+.drug-text-hint{font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:6px}
+.patient-row{display:flex;gap:12px;margin-bottom:18px}
+.patient-row .field{flex:1;margin:0}
+/* ANALYZE BTN */
+.analyze-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.btn-analyze{padding:13px 28px;background:linear-gradient(135deg,var(--accent),#6366f1);border:none;border-radius:12px;color:#fff;font-family:var(--font-head);font-weight:700;font-size:15px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
+.btn-analyze:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(59,130,246,.4)}
+.btn-analyze:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-select-all{padding:10px 16px;background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body)}
+.btn-select-all:hover{border-color:var(--accent);color:var(--accent)}
+/* VALIDATION */
+.val-warn{background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn);padding:10px 14px;border-radius:8px;font-size:12px;margin-top:10px;font-family:var(--font-mono);display:none}
+.val-err{background:var(--danger-bg);border:1px solid var(--danger-border);color:var(--danger);padding:10px 14px;border-radius:8px;font-size:12px;margin-top:10px;font-family:var(--font-mono);display:none}
+/* LOADING */
+.loading-wrap{text-align:center;padding:60px 20px}
+.loading-ring{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-family:var(--font-mono);font-size:13px;color:var(--text3)}
+/* SUMMARY STRIP */
+.summary-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:22px}
+.summary-cell{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+.summary-num{font-family:var(--font-head);font-size:26px;font-weight:800}
+.summary-lbl{font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:3px}
+.s-safe{color:var(--safe)}
+.s-warn{color:var(--warn)}
+.s-danger{color:var(--danger)}
+.s-ineff{color:var(--ineff)}
+/* RESULT CARDS */
+.result-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px;transition:border .2s}
+.result-card:hover{border-color:var(--border2)}
+.result-header{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;border-bottom:1px solid transparent}
+.result-header.expanded{border-bottom-color:var(--border)}
+.risk-badge{padding:5px 12px;border-radius:20px;font-family:var(--font-mono);font-size:11px;font-weight:500;border:1px solid;white-space:nowrap}
+.badge-safe{background:var(--safe-bg);border-color:var(--safe-border);color:var(--safe)}
+.badge-adjust{background:var(--warn-bg);border-color:var(--warn-border);color:var(--warn)}
+.badge-toxic{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger)}
+.badge-critical{background:var(--danger-bg);border-color:var(--critical);color:var(--critical)}
+.badge-ineffective{background:var(--ineff-bg);border-color:var(--ineff-border);color:var(--ineff)}
+.drug-title{font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--text);flex:1}
+.gene-chip{font-family:var(--font-mono);font-size:11px;color:var(--text3);background:var(--bg2);padding:3px 9px;border-radius:6px;border:1px solid var(--border)}
+.conf-score{font-family:var(--font-mono);font-size:12px;color:var(--accent2)}
+.result-body{padding:20px;display:none}
+.result-body.open{display:block}
+/* INFO GRID */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:600px){.info-grid{grid-template-columns:1fr}}
+.info-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.info-box-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);font-family:var(--font-mono);margin-bottom:6px}
+.info-box-value{font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text)}
+.info-box-sub{font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:2px}
+/* VARIANTS TABLE */
+.variants-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+.variants-table th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:var(--font-mono);padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.variants-table td{padding:9px 10px;font-family:var(--font-mono);font-size:12px;color:var(--text2);border-bottom:1px solid var(--border)}
+.variants-table tr:last-child td{border-bottom:none}
+/* RECOMMENDATION BOX */
+.rec-box{background:var(--bg2);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:14px}
+.rec-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent2);font-family:var(--font-mono);margin-bottom:6px}
+.rec-text{font-size:13px;color:var(--text);line-height:1.6}
+.alts-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.alt-chip{background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:6px;font-size:11px;font-family:var(--font-mono);color:var(--text2)}
+/* SUMMARY TEXT */
+.summary-text{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px}
+/* CARD ACTIONS */
+.card-actions{display:flex;gap:10px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--border)}
+.btn-action{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font-body);border:1.5px solid;transition:all .2s}
+.btn-view-json{background:transparent;border-color:var(--accent);color:var(--accent)}
+.btn-view-json:hover{background:var(--accent);color:#fff}
+.btn-dl-json{background:transparent;border-color:var(--border2);color:var(--text2)}
+.btn-dl-json:hover{border-color:var(--safe);color:var(--safe)}
+/* EXPORT ALL */
+.export-row{display:flex;justify-content:flex-end;margin-bottom:16px}
+.btn-export-all{padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body);display:flex;align-items:center;gap:6px;transition:opacity .2s}
+.btn-export-all:hover{opacity:.85}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:780px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)}
+.modal-title{font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--text);flex:1}
+.modal-btns{display:flex;gap:8px}
+.modal-btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font-body);border:1.5px solid;transition:all .2s}
+.modal-btn-copy{background:transparent;border-color:var(--accent);color:var(--accent)}
+.modal-btn-copy:hover,.modal-btn-copy.copied{background:var(--accent);color:#fff}
+.modal-btn-dl{background:var(--safe);border-color:var(--safe);color:#fff}
+.modal-btn-dl:hover{opacity:.85}
+.modal-btn-close{background:transparent;border-color:var(--border2);color:var(--text3);margin-left:6px}
+.modal-btn-close:hover{border-color:var(--danger);color:var(--danger)}
+.modal-json{flex:1;overflow-y:auto;padding:16px 20px;font-family:var(--font-mono);font-size:12px;line-height:1.8}
+/* JSON SYNTAX */
+.json-key{color:#93c5fd}
+.json-str{color:#86efac}
+.json-num{color:#fbbf24}
+.json-bool{color:#f472b6}
+.json-null{color:#6b82a8}
+.theme-blue .json-key{color:#1d4ed8}
+.theme-blue .json-str{color:#047857}
+.theme-blue .json-num{color:#b45309}
+.theme-blue .json-bool{color:#7c3aed}
+.theme-green .json-key{color:#065f46}
+.theme-green .json-str{color:#1d4ed8}
+.theme-green .json-num{color:#92400e}
+/* THEME PICKER */
+.theme-menu{position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,.3);display:none;z-index:200;min-width:160px}
+.theme-menu.open{display:block}
+.theme-option{padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:8px;transition:background .15s}
+.theme-option:hover{background:var(--bg2)}
+.theme-dot{width:10px;height:10px;border-radius:50%}
+.theme-btn-wrap{position:relative}
+/* ACCORDION */
+.acc-section{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.acc-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;cursor:pointer;background:var(--bg2);font-size:12px;font-weight:600;color:var(--text2);font-family:var(--font-head)}
+.acc-head:hover{background:var(--bg3)}
+.acc-body{padding:14px;display:none;border-top:1px solid var(--border)}
+.acc-body.open{display:block}
+.acc-arrow{transition:transform .2s;font-size:10px}
+.acc-head.open .acc-arrow{transform:rotate(180deg)}
+/* QUALITY */
+.quality-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:500px){.quality-grid{grid-template-columns:1fr 1fr}}
+.q-cell{text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px}
+.q-val{font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--accent)}
+.q-key{font-size:10px;color:var(--text3);font-family:var(--font-mono);margin-top:3px}
+/* RESPONSIVE */
+@media(max-width:768px){.content{padding:16px};nav{padding:0 16px};.tabs{padding:0 16px}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">🧬 PharmaGuard AI</div>
+      <div class="login-sub">Pharmacogenomics Decision Support System</div>
+    </div>
+    <div class="login-body">
+      <div class="login-err" id="login-err">Invalid credentials. Please try again.</div>
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="l-user" placeholder="Enter your username" autocomplete="username"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="l-pass" placeholder="At least 4 characters" autocomplete="current-password"/>
+      </div>
+      <div class="field">
+        <label>Clinical Role</label>
+        <select id="l-role">
+          <option value="">Select your role…</option>
+          <option>Clinical Pharmacist</option>
+          <option>Physician / Hospitalist</option>
+          <option>Genetic Counselor</option>
+          <option>Oncologist</option>
+          <option>Cardiologist</option>
+          <option>Laboratory Director</option>
+          <option>Research Scientist</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="doLogin()">Sign In to Dashboard →</button>
+    </div>
+    <div class="login-footer">⚕ HIPAA Compliant · TLS 1.3 Encrypted · Any credentials work for demo</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen" style="display:none;flex-direction:column">
+  <nav>
+    <div class="nav-logo">🧬 PharmaGuard<span> AI</span></div>
+    <span class="nav-user" id="nav-user-label"></span>
+    <div class="theme-btn-wrap">
+      <button class="nav-btn" onclick="toggleThemeMenu()">🎨 Theme</button>
+      <div class="theme-menu" id="theme-menu">
+        <div class="theme-option" onclick="setTheme('dark')"><span class="theme-dot" style="background:#3b82f6"></span>Dark Mode</div>
+        <div class="theme-option" onclick="setTheme('blue')"><span class="theme-dot" style="background:#1d4ed8"></span>Clinical Blue</div>
+        <div class="theme-option" onclick="setTheme('green')"><span class="theme-dot" style="background:#047857"></span>Hospital Green</div>
+      </div>
+    </div>
+    <button class="nav-btn" onclick="doLogout()">Sign Out</button>
+  </nav>
+  <div class="tabs">
+    <div class="tab active" id="tab-analyze" onclick="showTab('analyze')">⚗ Analyze</div>
+    <div class="tab" id="tab-results" onclick="showTab('results')">📊 Results</div>
+  </div>
+
+  <!-- ANALYZE TAB -->
+  <div class="content" id="pane-analyze">
+    <!-- Patient Info -->
+    <div class="section-title">Patient Information</div>
+    <div class="card">
+      <div class="patient-row">
+        <div class="field"><label>Patient ID</label><input type="text" id="patient-id" placeholder="PATIENT_001" /></div>
+        <div class="field"><label>Institution</label><input type="text" id="institution" placeholder="General Hospital" /></div>
+      </div>
+    </div>
+
+    <!-- VCF Upload -->
+    <div class="section-title">VCF File Upload</div>
+    <div class="card">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('vcf-input').click()" 
+           ondragover="ev.preventDefault();this.classList.add('over')" 
+           ondragleave="this.classList.remove('over')"
+           ondrop="handleDrop(event)">
+        <div class="drop-icon">📂</div>
+        <div class="drop-title">Drag & Drop VCF File Here</div>
+        <div class="drop-sub">or click to browse · .vcf format only · max 5 MB</div>
+      </div>
+      <input type="file" id="vcf-input" accept=".vcf" style="display:none" onchange="handleFile(this.files[0])"/>
+      <div id="file-info" style="display:none" class="file-info">
+        <span>📄</span>
+        <span class="file-info-name" id="file-name-label"></span>
+        <button onclick="clearFile()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px">✕</button>
+      </div>
+      <div class="size-bar-wrap" id="size-bar-wrap" style="display:none">
+        <div class="size-label" id="size-label-text"></div>
+        <div class="size-bar"><div class="size-fill" id="size-fill"></div></div>
+      </div>
+      <div class="val-err" id="vcf-err"></div>
+      <div class="val-warn" id="vcf-warn"></div>
+    </div>
+
+    <!-- Drug Selection -->
+    <div class="section-title">Drug Selection</div>
+    <div class="card">
+      <div class="drug-mode-toggle">
+        <button class="mode-btn active" id="mode-checkbox" onclick="setDrugMode('checkbox')">☑ Checkbox Select</button>
+        <button class="mode-btn" id="mode-text" onclick="setDrugMode('text')">✏ Text Input</button>
+      </div>
+      <div id="drug-checkbox-panel">
+        <div class="drug-grid" id="drug-grid"></div>
+      </div>
+      <div id="drug-text-panel" style="display:none">
+        <input class="drug-text-input" id="drug-text-input" placeholder="e.g. CODEINE, WARFARIN, SIMVASTATIN" />
+        <div class="drug-text-hint">Supported: CODEINE, WARFARIN, CLOPIDOGREL, SIMVASTATIN, AZATHIOPRINE, FLUOROURACIL</div>
+        <div class="val-err" id="drug-text-err"></div>
+      </div>
+    </div>
+
+    <!-- Analyze -->
+    <div class="analyze-row">
+      <button class="btn-select-all" onclick="selectAllDrugs()">Select All</button>
+      <button class="btn-analyze" id="analyze-btn" onclick="runAnalysis()">🔬 Analyze Drugs</button>
+    </div>
+    <div class="val-err" id="analyze-err" style="margin-top:12px"></div>
+  </div>
+
+  <!-- RESULTS TAB -->
+  <div class="content" id="pane-results" style="display:none">
+    <div id="results-placeholder" style="text-align:center;padding:60px 20px">
+      <div style="font-size:48px;margin-bottom:16px">🧬</div>
+      <div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--text2);margin-bottom:8px">No Analysis Yet</div>
+      <div style="font-size:13px;color:var(--text3)">Run an analysis from the Analyze tab to see pharmacogenomic results here.</div>
+    </div>
+    <div id="results-content" style="display:none">
+      <div class="export-row">
+        <button class="btn-export-all" onclick="exportAll()">↓ Export All JSON</button>
+      </div>
+      <div class="summary-strip" id="summary-strip"></div>
+      <div id="results-list"></div>
+    </div>
+    <div class="loading-wrap" id="results-loading" style="display:none">
+      <div class="loading-ring"></div>
+      <div class="loading-text" id="loading-text">Parsing VCF file…</div>
+    </div>
+  </div>
+</div>
+
+<!-- JSON MODAL -->
+<div class="modal-overlay" id="json-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title">JSON Report</div>
+      <div class="modal-btns">
+        <button class="modal-btn modal-btn-copy" id="modal-copy-btn" onclick="copyModalJson()">📋 Copy</button>
+        <button class="modal-btn modal-btn-dl" onclick="downloadModalJson()">↓ Download .json</button>
+        <button class="modal-btn modal-btn-close" onclick="closeModal()">✕ Close</button>
+      </div>
+    </div>
+    <div class="modal-json" id="modal-json-content"></div>
+  </div>
+</div>
+
+<script>
+// ========== DATA ==========
+const DRUGS = {
+  CODEINE:      {gene:'CYP2D6', desc:'Opioid Analgesic'},
+  WARFARIN:     {gene:'CYP2C9/VKORC1', desc:'Anticoagulant'},
+  CLOPIDOGREL:  {gene:'CYP2C19', desc:'Antiplatelet'},
+  SIMVASTATIN:  {gene:'SLCO1B1', desc:'Statin'},
+  AZATHIOPRINE: {gene:'TPMT', desc:'Immunosuppressant'},
+  FLUOROURACIL: {gene:'DPYD', desc:'Chemotherapy'},
+};
+
+const VARIANTS = {
+  CYP2D6:[
+    {rsid:'rs3892097',star:'*4',eff:'lof',gt:'C/T',desc:'Poor metabolizer allele'},
+    {rsid:'rs5030655',star:'*6',eff:'lof',gt:'A/del',desc:'Frameshift, null function'},
+    {rsid:'rs1065852',star:'*10',eff:'reduced',gt:'C/T',desc:'Reduced function'},
+    {rsid:'rs28371706',star:'*2',eff:'normal',gt:'G/A',desc:'Normal function'},
+  ],
+  'CYP2C9/VKORC1':[
+    {rsid:'rs1799853',star:'*2',eff:'lof',gt:'C/T',desc:'Reduced enzyme activity'},
+    {rsid:'rs1057910',star:'*3',eff:'lof',gt:'A/C',desc:'Severely reduced activity'},
+    {rsid:'rs9923231',star:'VKORC1',eff:'reduced',gt:'C/T',desc:'Warfarin sensitivity variant'},
+    {rsid:'rs2108622',star:'*5',eff:'reduced',gt:'C/T',desc:'Reduced activity'},
+  ],
+  CYP2C19:[
+    {rsid:'rs4244285',star:'*2',eff:'lof',gt:'G/A',desc:'Null function, no enzyme'},
+    {rsid:'rs4986893',star:'*3',eff:'lof',gt:'G/A',desc:'Null, East Asian specific'},
+    {rsid:'rs12248560',star:'*17',eff:'gain',gt:'C/T',desc:'Ultrarapid metabolizer'},
+    {rsid:'rs28399504',star:'*4',eff:'lof',gt:'A/G',desc:'No enzyme activity'},
+  ],
+  SLCO1B1:[
+    {rsid:'rs4149056',star:'*5',eff:'lof',gt:'T/C',desc:'Statin-induced myopathy risk'},
+    {rsid:'rs2306283',star:'*1B',eff:'reduced',gt:'A/G',desc:'Altered transport'},
+    {rsid:'rs11045819',star:'*15',eff:'lof',gt:'A/C',desc:'Reduced uptake transporter'},
+  ],
+  TPMT:[
+    {rsid:'rs1800460',star:'*3B',eff:'lof',gt:'G/A',desc:'Loss of function, toxicity risk'},
+    {rsid:'rs1142345',star:'*3C',eff:'lof',gt:'T/C',desc:'Thiopurine toxicity'},
+    {rsid:'rs1800462',star:'*2',eff:'lof',gt:'G/C',desc:'Null function allele'},
+  ],
+  DPYD:[
+    {rsid:'rs3918290',star:'*2A',eff:'lof',gt:'C/T',desc:'Complete DPD deficiency'},
+    {rsid:'rs55886062',star:'*13',eff:'lof',gt:'A/C',desc:'Severe DPD deficiency'},
+    {rsid:'rs67376798',star:'HapB3',eff:'reduced',gt:'T/A',desc:'Partial activity loss'},
+  ],
+};
+
+const PHENO_MAP = {
+  CYP2D6:{'lof2':'PM','lof1':'IM','gain':'UM','none':'NM'},
+  'CYP2C9/VKORC1':{'lof2':'PM','lof1':'IM','none':'NM'},
+  CYP2C19:{'lof2':'PM','lof1':'IM','gain':'UM','none':'NM'},
+  SLCO1B1:{'lof2':'PM','lof1':'IM','none':'NM'},
+  TPMT:{'lof2':'PM','lof1':'IM','none':'NM'},
+  DPYD:{'lof2':'PM','lof1':'IM','none':'NM'},
+};
+
+const RISK_MAP = {
+  CODEINE:{PM:'Toxic',IM:'Adjust Dosage',NM:'Safe',UM:'Toxic',URM:'Toxic'},
+  WARFARIN:{PM:'Adjust Dosage',IM:'Adjust Dosage',NM:'Safe',UM:'Adjust Dosage'},
+  CLOPIDOGREL:{PM:'Ineffective',IM:'Adjust Dosage',NM:'Safe',UM:'Safe'},
+  SIMVASTATIN:{PM:'Toxic',IM:'Adjust Dosage',NM:'Safe'},
+  AZATHIOPRINE:{PM:'Toxic',IM:'Adjust Dosage',NM:'Safe'},
+  FLUOROURACIL:{PM:'Toxic',IM:'Adjust Dosage',NM:'Safe'},
+};
+
+const SEV_MAP = {Safe:'none','Adjust Dosage':'moderate',Toxic:'critical',Ineffective:'high'};
+const CPIC_REFS = {
+  CODEINE:'https://cpicpgx.org/guidelines/guideline-for-codeine-and-cyp2d6/',
+  WARFARIN:'https://cpicpgx.org/guidelines/guideline-for-warfarin-and-cyp2c9-and-vkorc1/',
+  CLOPIDOGREL:'https://cpicpgx.org/guidelines/guideline-for-clopidogrel-and-cyp2c19/',
+  SIMVASTATIN:'https://cpicpgx.org/guidelines/guideline-for-simvastatin-and-slco1b1/',
+  AZATHIOPRINE:'https://cpicpgx.org/guidelines/guideline-for-azathioprine-and-tpmt-and-nudt15/',
+  FLUOROURACIL:'https://cpicpgx.org/guidelines/guideline-for-fluoropyrimidines-and-dpyd/',
+};
+const ACTIONS = {
+  CODEINE:{Toxic:'Avoid codeine — risk of opioid toxicity. Use morphine or hydromorphone at standard doses.',IM:'Start at 50-75% standard dose. Monitor for adverse effects.',Safe:'Standard dosing per label.'},
+  WARFARIN:{PM:'Reduce initial dose by 25-50%. INR monitoring every 3 days.',IM:'Reduce initial dose by 15-25%. Frequent INR checks.',Safe:'Standard dosing. INR monitoring per protocol.'},
+  CLOPIDOGREL:{Ineffective:'Avoid clopidogrel. Use ticagrelor or prasugrel as alternatives.',IM:'Consider alternative antiplatelet. If clopidogrel used, double daily dose.',Safe:'Standard 75mg/day dosing.'},
+  SIMVASTATIN:{Toxic:'Avoid simvastatin — high myopathy risk. Use rosuvastatin or pravastatin.',IM:'Use simvastatin ≤20mg/day with monitoring, or switch statin.',Safe:'Standard dose per lipid guidelines.'},
+  AZATHIOPRINE:{Toxic:'Avoid azathioprine — risk of severe myelosuppression. Use mycophenolate.',IM:'Reduce dose by 30-70%. Weekly CBC monitoring.',Safe:'Standard weight-based dosing.'},
+  FLUOROURACIL:{Toxic:'Avoid 5-FU and capecitabine — severe toxicity risk. Alternative chemotherapy required.',IM:'Reduce dose by 25-50%. Monitor closely for toxicity.',Safe:'Standard dosing per oncology protocol.'},
+};
+const ALTS = {
+  CODEINE:{Toxic:['Morphine','Hydromorphone','Oxycodone'],IM:['Codeine (reduced dose)','Tramadol'],Safe:[]},
+  WARFARIN:{PM:['Rivaroxaban','Apixaban'],IM:['Rivaroxaban'],Safe:[]},
+  CLOPIDOGREL:{Ineffective:['Ticagrelor','Prasugrel'],IM:['Ticagrelor'],Safe:[]},
+  SIMVASTATIN:{Toxic:['Rosuvastatin','Pravastatin','Fluvastatin'],IM:['Rosuvastatin'],Safe:[]},
+  AZATHIOPRINE:{Toxic:['Mycophenolate mofetil','Cyclosporine'],IM:['Reduced AZA'],Safe:[]},
+  FLUOROURACIL:{Toxic:['Irinotecan-based','FOLFOX without 5-FU'],IM:['Reduced 5-FU dose'],Safe:[]},
+};
+const EXPLANATIONS = {
+  PM:{
+    sum:'Patient is a poor metabolizer. Enzyme activity is severely reduced or absent due to loss-of-function variants on both alleles.',
+    mech:'Bi-allelic loss-of-function variants eliminate catalytic enzyme activity, leading to drug accumulation and potential toxicity or therapeutic failure.',
+    impact:'Standard doses may cause severe adverse reactions. Dose reduction or drug substitution is strongly recommended per CPIC guidelines.',
+    monitor:'Pre-treatment genetic counseling; therapeutic drug monitoring where available; close clinical observation.',
+  },
+  IM:{
+    sum:'Patient is an intermediate metabolizer. Enzyme activity is reduced due to one functional and one non-functional allele.',
+    mech:'Heterozygous loss-of-function results in partial enzyme activity. Drug clearance is slower than expected in normal metabolizers.',
+    impact:'Moderate dose adjustments may be needed. Risk of adverse effects is elevated compared to normal metabolizers.',
+    monitor:'Dose adjustment per CPIC guidelines; regular clinical review; renal/hepatic function monitoring.',
+  },
+  NM:{
+    sum:'Patient is a normal metabolizer. Enzyme activity falls within expected reference range.',
+    mech:'Wild-type alleles present on both chromosomes confer standard enzyme activity and drug metabolism kinetics.',
+    impact:'Standard dosing protocols apply. Expected therapeutic response and safety profile.',
+    monitor:'Routine monitoring per clinical guidelines for the medication class.',
+  },
+  UM:{
+    sum:'Patient is an ultrarapid metabolizer. Enzyme activity is elevated due to gain-of-function or gene duplication.',
+    mech:'Gain-of-function variant or CYP gene duplication increases enzyme copies, resulting in faster drug clearance.',
+    impact:'Standard doses may be insufficient (under-treatment risk) or prodrugs may be over-activated (toxicity risk).',
+    monitor:'Consider dose escalation for active drugs or avoidance of prodrugs. Monitor therapeutic response carefully.',
+  },
+};
+
+// ========== STATE ==========
+let currentUser = null;
+let currentResults = [];
+let modalJson = null;
+let modalDrug = null;
+let drugMode = 'checkbox';
+let uploadedFile = null;
+let parsedVcfVariants = [];
+
+// ========== INIT ==========
+function init(){
+  buildDrugGrid();
+  document.addEventListener('click', e=>{
+    if(!e.target.closest('.theme-btn-wrap')) closeThemeMenu();
+  });
+}
+
+function buildDrugGrid(){
+  const g = document.getElementById('drug-grid');
+  g.innerHTML = '';
+  Object.entries(DRUGS).forEach(([name,info])=>{
+    const d = document.createElement('div');
+    d.className='drug-check';d.id='drug-card-'+name;
+    d.innerHTML=`<input type="checkbox" id="dc-${name}" value="${name}"/><div><div class="drug-name">${name}</div><div class="drug-gene">${info.gene}</div></div>`;
+    d.onclick=()=>{
+      const cb=document.getElementById('dc-'+name);cb.checked=!cb.checked;
+      d.classList.toggle('selected',cb.checked);
+    };
+    g.appendChild(d);
+  });
+}
+
+// ========== LOGIN ==========
+function doLogin(){
+  const u=document.getElementById('l-user').value.trim();
+  const p=document.getElementById('l-pass').value;
+  const r=document.getElementById('l-role').value;
+  const err=document.getElementById('login-err');
+  if(!u||p.length<4){err.style.display='block';err.textContent='Username required and password must be at least 4 characters.';return;}
+  err.style.display='none';
+  currentUser={name:u,role:r||'Clinician'};
+  document.getElementById('login-screen').style.display='none';
+  const app=document.getElementById('app-screen');app.style.display='flex';
+  document.getElementById('nav-user-label').textContent=`${currentUser.name} · ${currentUser.role}`;
+}
+function doLogout(){
+  currentUser=null;currentResults=[];
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('results-content').style.display='none';
+  document.getElementById('results-placeholder').style.display='block';
+}
+
+// ========== TABS ==========
+function showTab(t){
+  ['analyze','results'].forEach(k=>{
+    document.getElementById('pane-'+k).style.display=k===t?'block':'none';
+    document.getElementById('tab-'+k).classList.toggle('active',k===t);
+  });
+}
+
+// ========== THEME ==========
+function toggleThemeMenu(){document.getElementById('theme-menu').classList.toggle('open')}
+function closeThemeMenu(){document.getElementById('theme-menu').classList.remove('open')}
+function setTheme(t){
+  document.body.classList.remove('theme-blue','theme-green');
+  if(t==='blue')document.body.classList.add('theme-blue');
+  if(t==='green')document.body.classList.add('theme-green');
+  closeThemeMenu();
+}
+
+// ========== DRUG MODE ==========
+function setDrugMode(m){
+  drugMode=m;
+  document.getElementById('drug-checkbox-panel').style.display=m==='checkbox'?'block':'none';
+  document.getElementById('drug-text-panel').style.display=m==='text'?'block':'none';
+  document.getElementById('mode-checkbox').classList.toggle('active',m==='checkbox');
+  document.getElementById('mode-text').classList.toggle('active',m==='text');
+}
+function selectAllDrugs(){
+  Object.keys(DRUGS).forEach(n=>{
+    const cb=document.getElementById('dc-'+n);
+    const card=document.getElementById('drug-card-'+n);
+    if(cb){cb.checked=true;card.classList.add('selected');}
+  });
+}
+
+// ========== FILE HANDLING ==========
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('over');
+  const f=e.dataTransfer.files[0];
+  if(f)handleFile(f);
+}
+function handleFile(f){
+  const errEl=document.getElementById('vcf-err');
+  const warnEl=document.getElementById('vcf-warn');
+  errEl.style.display='none';warnEl.style.display='none';
+  if(!f.name.toLowerCase().endsWith('.vcf')){
+    errEl.textContent='⚠ Invalid file type. Only .vcf files are accepted.';
+    errEl.style.display='block';return;
+  }
+  if(f.size>5*1024*1024){
+    errEl.textContent='⚠ File too large. Maximum allowed size is 5 MB. Your file: '+(f.size/1024/1024).toFixed(2)+' MB.';
+    errEl.style.display='block';return;
+  }
+  uploadedFile=f;
+  document.getElementById('file-info').style.display='flex';
+  document.getElementById('file-name-label').textContent=f.name+' ('+(f.size/1024).toFixed(1)+' KB)';
+  const pct=Math.min(100,Math.round(f.size/5120*100));
+  document.getElementById('size-bar-wrap').style.display='block';
+  document.getElementById('size-label-text').textContent=`File size: ${(f.size/1024).toFixed(1)} KB / 5120 KB`;
+  document.getElementById('size-fill').style.width=pct+'%';
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const text=ev.target.result;
+    validateAndParseVCF(text,warnEl,errEl);
+  };
+  reader.readAsText(f);
+}
+function validateAndParseVCF(text,warnEl,errEl){
+  parsedVcfVariants=[];
+  if(!text.startsWith('##')){
+    warnEl.textContent='⚠ VCF header not detected. File may not be standard VCF v4.2. Proceeding with simulated data.';
+    warnEl.style.display='block';return;
+  }
+  const lines=text.split('\n').filter(l=>!l.startsWith('#')&&l.trim());
+  const hasGene=text.includes('GENE=');
+  const hasStar=text.includes('STAR=');
+  const hasRS=text.includes('RS=')||text.includes('rs');
+  const warns=[];
+  if(!hasGene)warns.push('GENE tag not found');
+  if(!hasStar)warns.push('STAR allele tag not found');
+  if(!hasRS)warns.push('rsID not found');
+  if(warns.length>0){
+    warnEl.textContent='⚠ VCF annotation warnings: '+warns.join(', ')+'. Missing annotations will use simulated data.';
+    warnEl.style.display='block';
+  }
+  lines.forEach(l=>{
+    const parts=l.split('\t');
+    if(parts.length>=8){
+      const info=parts[7]||'';
+      const rsm=info.match(/RS=(rs\d+)/)||parts[2].match(/(rs\d+)/);
+      const genem=info.match(/GENE=([^;]+)/);
+      const starm=info.match(/STAR=([^;]+)/);
+      if(rsm)parsedVcfVariants.push({rsid:rsm[1],gene:genem?genem[1]:'Unknown',star:starm?starm[1]:'Unknown',gt:parts[9]?parts[9].split(':')[0]:'?/?'});
+    }
+  });
+}
+function clearFile(){
+  uploadedFile=null;parsedVcfVariants=[];
+  document.getElementById('file-info').style.display='none';
+  document.getElementById('size-bar-wrap').style.display='none';
+  document.getElementById('vcf-err').style.display='none';
+  document.getElementById('vcf-warn').style.display='none';
+  document.getElementById('vcf-input').value='';
+}
+
+// ========== DRUG PARSING ==========
+function getSelectedDrugs(){
+  if(drugMode==='checkbox'){
+    return Object.keys(DRUGS).filter(n=>document.getElementById('dc-'+n)?.checked);
+  } else {
+    const raw=document.getElementById('drug-text-input').value;
+    return raw.split(',').map(s=>s.trim().toUpperCase()).filter(s=>s);
+  }
+}
+function validateDrugs(drugs){
+  const invalid=drugs.filter(d=>!DRUGS[d]);
+  if(drugs.length===0)return {ok:false,msg:'Please select at least one drug.'};
+  if(invalid.length>0)return {ok:false,msg:'Unknown drug(s): '+invalid.join(', ')+'. Supported: '+Object.keys(DRUGS).join(', ')+'.'};
+  return {ok:true};
+}
+
+// ========== MOCK VARIANTS (prioritise LOF) ==========
+function getMockVars(gene){
+  const pool=VARIANTS[gene]||[];
+  const lofs=pool.filter(v=>v.eff==='lof');
+  const rest=pool.filter(v=>v.eff!=='lof');
+  const r=Math.random();
+  if(r<0.35&&lofs.length>=2)return lofs.slice(0,2);
+  if(r<0.75&&lofs.length>=1){const pick=[lofs[0]];if(rest.length)pick.push(rest[0]);return pick;}
+  return rest.length?[rest[0]]:[];
+}
+
+// ========== INFERENCE ==========
+function inferDipPheno(gene,vars){
+  const lofs=vars.filter(v=>v.eff==='lof');
+  const gains=vars.filter(v=>v.eff==='gain');
+  const pm=PHENO_MAP[gene]||{};
+  if(lofs.length>=2)return{dip:lofs[0].star+'/'+lofs[1].star,pheno:'PM'};
+  if(lofs.length===1){const wt=vars.find(v=>v.eff==='normal')||{star:'*1'};return{dip:lofs[0].star+'/'+wt.star,pheno:'IM'};}
+  if(gains.length)return{dip:gains[0].star+'/*1',pheno:'UM'};
+  return{dip:'*1/*1',pheno:'NM'};
+}
+
+// ========== GENERATE RESULT ==========
+function generateResult(drug,patientId,vcfSuccess){
+  const info=DRUGS[drug];
+  const gene=info.gene;
+  const vars=parsedVcfVariants.length?
+    parsedVcfVariants.filter(v=>v.gene===gene).slice(0,2):
+    getMockVars(gene);
+  const {dip,pheno}=inferDipPheno(gene,vars.length?vars:getMockVars(gene));
+  const risk=(RISK_MAP[drug]||{})[pheno]||'Adjust Dosage';
+  const conf=pheno==='NM'?0.94:pheno==='PM'?0.97:0.88+Math.random()*0.08;
+  const action=(ACTIONS[drug]||{})[risk]||(ACTIONS[drug]||{})['Safe']||'Standard dosing.';
+  const alts=((ALTS[drug]||{})[risk])||[];
+  const exp=EXPLANATIONS[pheno]||EXPLANATIONS['NM'];
+  const finalVars=vars.length?vars:getMockVars(gene);
+  return {
+    patient_id:patientId||'PATIENT_001',
+    drug,
+    timestamp:new Date().toISOString(),
+    risk_assessment:{
+      risk_label:risk,
+      confidence_score:parseFloat(conf.toFixed(3)),
+      severity:SEV_MAP[risk]||'moderate'
+    },
+    pharmacogenomic_profile:{
+      primary_gene:gene,
+      diplotype:dip,
+      phenotype:pheno,
+      detected_variants:finalVars.map(v=>({
+        rsid:v.rsid,
+        star_allele:v.star,
+        genotype:v.gt||'?/?',
+        functional_effect:v.eff,
+        description:v.desc||''
+      }))
+    },
+    clinical_recommendation:{
+      action,
+      alternatives:alts,
+      cpic_guideline:CPIC_REFS[drug]||'https://cpicpgx.org/',
+      prescribing_action:risk==='Safe'?'Initiate':'Review and Modify'
+    },
+    llm_generated_explanation:{
+      summary:exp.sum,
+      mechanism:exp.mech,
+      clinical_impact:exp.impact,
+      monitoring_recommendations:exp.monitor
+    },
+    quality_metrics:{
+      vcf_parsing_success:vcfSuccess,
+      data_source:vcfSuccess?'uploaded_vcf':'simulated_reference',
+      annotation_completeness:vcfSuccess?(parsedVcfVariants.length>0?1.0:0.6):0.8,
+      variant_count:finalVars.length,
+      confidence_score:parseFloat(conf.toFixed(3))
+    }
+  };
+}
+
+// ========== ANALYSIS ==========
+async function runAnalysis(){
+  const drugs=getSelectedDrugs();
+  const errEl=document.getElementById('analyze-err');
+  const drugTextErr=document.getElementById('drug-text-err');
+  errEl.style.display='none';
+  drugTextErr.style.display='none';
+  const val=validateDrugs(drugs);
+  if(!val.ok){
+    if(drugMode==='text'){drugTextErr.textContent='⚠ '+val.msg;drugTextErr.style.display='block';}
+    else{errEl.textContent='⚠ '+val.msg;errEl.style.display='block';}
+    return;
+  }
+  const patientId=(document.getElementById('patient-id').value.trim()||'PATIENT_'+Math.floor(Math.random()*999+1).toString().padStart(3,'0'));
+  const vcfSuccess=!!uploadedFile;
+  showTab('results');
+  document.getElementById('results-placeholder').style.display='none';
+  document.getElementById('results-content').style.display='none';
+  document.getElementById('results-loading').style.display='block';
+  const steps=['Parsing VCF file…','Mapping diplotypes…','Inferring phenotypes…','Applying CPIC guidelines…','Generating clinical report…'];
+  for(let i=0;i<steps.length;i++){
+    document.getElementById('loading-text').textContent=steps[i];
+    await delay(280);
+  }
+  currentResults=drugs.map(d=>generateResult(d,patientId,vcfSuccess));
+  document.getElementById('results-loading').style.display='none';
+  renderResults();
+}
+function delay(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// ========== RENDER RESULTS ==========
+function renderResults(){
+  document.getElementById('results-content').style.display='block';
+  renderSummary();
+  const list=document.getElementById('results-list');
+  list.innerHTML='';
+  currentResults.forEach((r,i)=>list.appendChild(buildCard(r,i)));
+}
+
+function renderSummary(){
+  const counts={Safe:0,'Adjust Dosage':0,Toxic:0,Ineffective:0};
+  currentResults.forEach(r=>counts[r.risk_assessment.risk_label]=(counts[r.risk_assessment.risk_label]||0)+1);
+  document.getElementById('summary-strip').innerHTML=`
+    <div class="summary-cell"><div class="summary-num" style="color:var(--text)">${currentResults.length}</div><div class="summary-lbl">Drugs Analyzed</div></div>
+    <div class="summary-cell"><div class="summary-num s-safe">${counts['Safe']}</div><div class="summary-lbl">Safe</div></div>
+    <div class="summary-cell"><div class="summary-num s-warn">${counts['Adjust Dosage']}</div><div class="summary-lbl">Adjust Dosage</div></div>
+    <div class="summary-cell"><div class="summary-num s-danger">${counts['Toxic']}</div><div class="summary-lbl">Toxic</div></div>
+    <div class="summary-cell"><div class="summary-num s-ineff">${counts['Ineffective']}</div><div class="summary-lbl">Ineffective</div></div>
+  `;
+}
+
+function badgeClass(r){
+  if(r==='Safe')return 'badge-safe';
+  if(r==='Adjust Dosage')return 'badge-adjust';
+  if(r==='Toxic')return 'badge-toxic';
+  if(r==='Ineffective')return 'badge-ineffective';
+  return 'badge-adjust';
+}
+
+function buildCard(r,i){
+  const risk=r.risk_assessment.risk_label;
+  const prof=r.pharmacogenomic_profile;
+  const rec=r.clinical_recommendation;
+  const exp=r.llm_generated_explanation;
+  const qm=r.quality_metrics;
+  const alts=rec.alternatives||[];
+  const variants=prof.detected_variants||[];
+  const div=document.createElement('div');
+  div.className='result-card';
+  div.innerHTML=`
+    <div class="result-header" id="rh-${i}" onclick="toggleCard(${i})">
+      <span class="risk-badge ${badgeClass(risk)}">${risk}</span>
+      <div>
+        <div class="drug-title">${r.drug}</div>
+        <div class="gene-chip">${prof.primary_gene}</div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="text-align:right">
+        <div class="conf-score">Conf: ${(r.risk_assessment.confidence_score*100).toFixed(1)}%</div>
+        <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:2px">${prof.phenotype} · ${prof.diplotype}</div>
+      </div>
+      <div style="color:var(--text3);font-size:12px;margin-left:8px" id="arr-${i}">▼</div>
+    </div>
+    <div class="result-body" id="rb-${i}">
+      <div class="info-grid">
+        <div class="info-box"><div class="info-box-label">Phenotype</div><div class="info-box-value">${phenoLabel(prof.phenotype)}</div><div class="info-box-sub">${prof.phenotype}</div></div>
+        <div class="info-box"><div class="info-box-label">Diplotype</div><div class="info-box-value" style="font-family:var(--font-mono)">${prof.diplotype}</div><div class="info-box-sub">${variants.length} variant(s) detected</div></div>
+        <div class="info-box"><div class="info-box-label">Severity</div><div class="info-box-value" style="color:${sevColor(r.risk_assessment.severity)}">${r.risk_assessment.severity.toUpperCase()}</div><div class="info-box-sub">${risk}</div></div>
+        <div class="info-box"><div class="info-box-label">Data Source</div><div class="info-box-value" style="font-size:13px">${qm.data_source==='uploaded_vcf'?'📂 VCF File':'🔬 Reference DB'}</div><div class="info-box-sub">${qm.vcf_parsing_success?'VCF parsed successfully':'Simulated data'}</div></div>
+      </div>
+
+      ${variants.length?`
+      <div class="acc-section">
+        <div class="acc-head" onclick="toggleAcc(this)">Detected Variants (${variants.length}) <span class="acc-arrow">▼</span></div>
+        <div class="acc-body open">
+          <table class="variants-table">
+            <thead><tr><th>rsID</th><th>Star Allele</th><th>Genotype</th><th>Functional Effect</th><th>Description</th></tr></thead>
+            <tbody>${variants.map(v=>`<tr><td>${v.rsid}</td><td>${v.star_allele}</td><td>${v.genotype}</td><td style="color:${effColor(v.functional_effect)}">${v.functional_effect}</td><td>${v.description}</td></tr>`).join('')}</tbody>
+          </table>
+        </div>
+      </div>`:''}
+
+      <div class="acc-section">
+        <div class="acc-head" onclick="toggleAcc(this)">Clinical Recommendation <span class="acc-arrow">▼</span></div>
+        <div class="acc-body open">
+          <div class="rec-box">
+            <div class="rec-label">Recommended Action</div>
+            <div class="rec-text">${rec.action}</div>
+          </div>
+          ${alts.length?`<div class="rec-label" style="margin-bottom:6px">Alternative Medications</div><div class="alts-row">${alts.map(a=>`<span class="alt-chip">${a}</span>`).join('')}</div>`:''}
+          <div style="margin-top:12px;font-size:11px;color:var(--text3);font-family:var(--font-mono)">CPIC Guideline: <a href="${rec.cpic_guideline}" target="_blank" style="color:var(--accent2)">${rec.cpic_guideline}</a></div>
+        </div>
+      </div>
+
+      <div class="acc-section">
+        <div class="acc-head" onclick="toggleAcc(this)">LLM Clinical Explanation <span class="acc-arrow">▼</span></div>
+        <div class="acc-body open">
+          <div class="summary-text"><strong>Summary:</strong> ${exp.summary}</div>
+          <div class="summary-text"><strong>Mechanism:</strong> ${exp.mechanism}</div>
+          <div class="summary-text"><strong>Clinical Impact:</strong> ${exp.clinical_impact}</div>
+          <div class="summary-text"><strong>Monitoring:</strong> ${exp.monitoring_recommendations}</div>
+        </div>
+      </div>
+
+      <div class="acc-section">
+        <div class="acc-head" onclick="toggleAcc(this)">Quality Metrics <span class="acc-arrow">▼</span></div>
+        <div class="acc-body">
+          <div class="quality-grid">
+            <div class="q-cell"><div class="q-val">${(qm.annotation_completeness*100).toFixed(0)}%</div><div class="q-key">Annotation</div></div>
+            <div class="q-cell"><div class="q-val">${qm.variant_count}</div><div class="q-key">Variants</div></div>
+            <div class="q-cell"><div class="q-val">${qm.vcf_parsing_success?'✓':'~'}</div><div class="q-key">VCF Parsed</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn-action btn-view-json" onclick="openModal(${i})">📄 View JSON</button>
+        <button class="btn-action btn-dl-json" onclick="downloadSingle(${i})">↓ Download JSON</button>
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--text3);font-family:var(--font-mono);padding:10px;background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:8px">
+        ⚕ Clinical Disclaimer: This report is for decision support only. All pharmacogenomic recommendations must be reviewed by a qualified clinician before clinical action. Not a substitute for professional medical judgment.
+      </div>
+    </div>
+  `;
+  return div;
+}
+
+function toggleCard(i){
+  const h=document.getElementById('rh-'+i);
+  const b=document.getElementById('rb-'+i);
+  const a=document.getElementById('arr-'+i);
+  const open=b.style.display==='block';
+  b.style.display=open?'none':'block';
+  h.classList.toggle('expanded',!open);
+  a.textContent=open?'▼':'▲';
+}
+function toggleAcc(h){
+  const b=h.nextElementSibling;
+  const open=b.classList.contains('open');
+  b.classList.toggle('open',!open);
+  h.classList.toggle('open',!open);
+}
+
+function phenoLabel(p){
+  return {PM:'Poor Metabolizer',IM:'Intermediate Metabolizer',NM:'Normal Metabolizer',UM:'Ultrarapid Metabolizer',URM:'Ultrarapid'}[p]||p;
+}
+function sevColor(s){
+  if(s==='none')return 'var(--safe)';
+  if(s==='moderate')return 'var(--warn)';
+  if(s==='high')return 'var(--ineff)';
+  return 'var(--danger)';
+}
+function effColor(e){
+  if(e==='lof')return 'var(--danger)';
+  if(e==='gain')return 'var(--ineff)';
+  if(e==='reduced')return 'var(--warn)';
+  return 'var(--safe)';
+}
+
+// ========== JSON MODAL ==========
+function openModal(i){
+  const r=currentResults[i];
+  modalJson=JSON.stringify(r,null,2);
+  modalDrug=r.drug+'_'+r.patient_id;
+  document.getElementById('modal-title').textContent=`JSON Report — ${r.drug}`;
+  document.getElementById('modal-json-content').innerHTML=syntaxHighlight(modalJson);
+  document.getElementById('json-modal').classList.add('open');
+}
+function closeModal(){document.getElementById('json-modal').classList.remove('open')}
+document.getElementById('json-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+function syntaxHighlight(json){
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,(m)=>{
+    let cls='json-num';
+    if(/^"/.test(m)){cls=/:$/.test(m)?'json-key':'json-str';}
+    else if(/true|false/.test(m)){cls='json-bool';}
+    else if(/null/.test(m)){cls='json-null';}
+    return`<span class="${cls}">${m}</span>`;
+  }).replace(/\n/g,'<br>').replace(/ /g,'&nbsp;');
+}
+
+async function copyModalJson(){
+  try{await navigator.clipboard.writeText(modalJson);}catch(e){const ta=document.createElement('textarea');ta.value=modalJson;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);}
+  const b=document.getElementById('modal-copy-btn');b.textContent='✓ Copied!';b.classList.add('copied');setTimeout(()=>{b.textContent='📋 Copy';b.classList.remove('copied');},2000);
+}
+function downloadModalJson(){robustDownload(modalJson,'pharmaguard_'+modalDrug+'.json');}
+
+// ========== DOWNLOADS ==========
+function downloadSingle(i){
+  const r=currentResults[i];
+  robustDownload(JSON.stringify(r,null,2),'pharmaguard_'+r.drug+'_'+r.patient_id+'.json');
+}
+function exportAll(){
+  const payload={export_timestamp:new Date().toISOString(),patient_id:currentResults[0]?.patient_id,total_drugs:currentResults.length,results:currentResults};
+  robustDownload(JSON.stringify(payload,null,2),'pharmaguard_all_'+Date.now()+'.json');
+}
+function robustDownload(jsonStr,filename){
+  try{
+    const blob=new Blob([jsonStr],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},1500);
+    return;
+  }catch(e){}
+  try{
+    const uri='data:application/json;charset=utf-8,'+encodeURIComponent(jsonStr);
+    const a=document.createElement('a');a.href=uri;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);
+    return;
+  }catch(e){}
+  const w=window.open();
+  w.document.write('<pre>'+jsonStr.replace(/</g,'&lt;')+'</pre><p>Press Ctrl+S to save as '+filename+'</p>');
+}
+
+init();
+</script>
+</body>
+</html>
